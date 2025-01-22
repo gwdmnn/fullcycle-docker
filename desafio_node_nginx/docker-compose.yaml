@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: mysql
+    command: --innodb-use-native-aio=0 
+    container_name: db
+    restart: always
+    tty: true                   ##habilita o modo interativo
+    volumes:
+      - ./mysql/data:/var/lib/mysql  ##backup do banco de dados dentro de um volume na pasta mysql local
+    networks:
+      - node-network
+  app:
+    build: 
+      context: node
+    container_name: node
+    working_dir: /usr/src/app
+    entrypoint: ["dockerize", "-wait", "tcp://db:3306", "-timeout", "20s", "sh", "-c", "npm init -y && npm install express --save && npm install mysql && node index.js run"]
+    networks:
+      - node-network
+    volumes:
+      - ./node:/usr/src/app
+    tty: true
+    depends_on:
+      - db
+  nginx:
+    build: 
+      context: nginx
+    container_name: nginx
+    ports:
+      - 8080:8080
+    networks:
+      - node-network
+networks:
+  node-network:
+    driver: bridge 
